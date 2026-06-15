@@ -1,0 +1,43 @@
+name: Sync Releases
+
+on:
+  schedule:
+    - cron: "33 3 */3 * *"
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+concurrency:
+  group: sync-releases
+  cancel-in-progress: false
+
+jobs:
+  sync:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout self
+        uses: actions/checkout@v4
+
+      - name: Install gh CLI
+        run: |
+          sudo apt update
+          sudo apt install -y gh
+
+      - name: Authenticate gh
+        run: |
+          echo "${{ secrets.GITHUB_TOKEN }}" | gh auth login --with-token
+
+      - name: Run sync
+        env:
+          # ✅ 通用化配置：在这里修改
+          UPSTREAM_REPO: v2rayA/v2rayA
+          TARGET_REPO: ${{ github.repository }}
+          MAX_WORKERS: 5
+          INCREMENTAL_SYNC: true
+          SYNC_ORDER: oldest_to_newest
+          RATE_LIMIT_RETRY: 3
+          SLEEP_ON_RATE_LIMIT: 60
+          TARGET: ${{ github.repository }}
+        run: |
+          python3 scripts/sync_releases.py
